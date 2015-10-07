@@ -3,12 +3,11 @@ package main
 import (
 	. "fmt"
 	"os"
+	"raft/settings"
 	"strconv"
 	"time"
 	"udp"
 )
-
-var cluster []string = []string{"56001", "56002", "56003", "56004", "56005"}
 
 func CheckError(err error) {
 	if err != nil {
@@ -18,12 +17,26 @@ func CheckError(err error) {
 
 func main() {
 
+	content := []string{"heartbeat", "heartbeat", "teste1:proposal", "accept", "teste2:proposal", "accept"}
+
+	udp.SetRecvPort("1234")
+
 	index, _ := strconv.Atoi(os.Args[1])
 
-	for {
-		udp.Send("heartbeat", cluster[index])
-		time.Sleep(time.Second)
+	for _, msg := range content {
+		udp.Send(msg, settings.Cluster[index])
+		time.Sleep(time.Millisecond * 500)
 	}
+
+	// var msg string
+
+	// for {
+
+	// 	Scanf("%s", &msg)
+
+	// 	udp.Send(msg, settings.Cluster[index])
+	// 	time.Sleep(time.Second)
+	// }
 
 	// var msg string
 

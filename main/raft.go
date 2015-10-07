@@ -2,56 +2,60 @@ package main
 
 import (
 	. "fmt"
-	// "net"
 	"os"
+	"raft/follower"
+	// "raft/leader"
+	"raft/settings"
 	"strconv"
 	"time"
 	"udp"
 )
 
-type TimeCounter bool
-
 const maxTimeout = time.Second * 3
 
-var cluster []string = []string{"56001", "56002", "56003", "56004", "56005"}
-
-var leader bool = false
+var isLeader bool = false
 
 func init() {
 
 	index, _ := strconv.Atoi(os.Args[1])
 
-	udp.SetRecvPort(cluster[index])
+	settings.SetMyPort(settings.Cluster[index])
+
+	udp.SetRecvPort(settings.Port)
+
+	udp.SetTimeout(time.Now().Add(maxTimeout))
 
 	if index == 0 {
-		leader = true
+		isLeader = true
 	}
 
-	Printf("My port is %s\n", cluster[index])
+	Printf("My port is %s\n", settings.Port)
 
 }
 
 func main() {
 
 	for {
-		if leader {
+		if isLeader {
 
-			for _, i := range cluster {
-				go udp.Send("heartbeat", i)
-				time.Sleep(50 * time.Millisecond)
+			for _, i := range settings.Cluster {
+				if i != settings.Port {
+					go udp.Send("heartbeat", i)
+
+				}
 			}
+
+			Println("Sent heartbeats to cluster")
+
+			time.Sleep(50 * time.Millisecond)
 
 		} else {
 
-			timeout := time.Now().Add(maxTimeout)
-			msg := udp.ReceiveTimeout(timeout)
+			// timeout :=
+			msg := udp.ReceiveTimeout()
 
-			if msg == "timeout" {
+			follower.HandleRequest(msg)
 
-				Println(">> Starting election")
-			} else {
-				Println(msg)
-			}
 		}
 
 	}
