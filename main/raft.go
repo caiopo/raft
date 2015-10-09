@@ -11,7 +11,10 @@ import (
 	"udp"
 )
 
-const maxTimeout = time.Second * 3
+const (
+	maxTimeout = time.Second * 3
+	envVar     = "RAFT_PORT"
+)
 
 var isLeader bool = false
 
@@ -35,24 +38,49 @@ func init() {
 
 func main() {
 
+	var msg string
+
 	for {
 		if isLeader {
 
-			for _, i := range settings.Cluster {
-				if i != settings.Port {
-					go udp.Send("heartbeat", i)
+			listening := true
+
+			ch := make(chan string, 10)
+
+			for {
+
+				for _, i := range settings.Cluster {
+					if i != settings.Port {
+
+						go udp.Send("heartbeat", i)
+
+					}
+				}
+
+				Println("Sent heartbeats to cluster")
+
+				for _, i := range settings.Cluster {
+
+					countResponse := 0
+
+					select {
+					case msg = <-ch:
+						if msg == "alive" {
+							countResponse++
+						}
+					case <-time.After(time.Second):
+						break
+					}
 
 				}
+
 			}
 
-			Println("Sent heartbeats to cluster")
-
-			time.Sleep(50 * time.Millisecond)
+			// time.Sleep(50 * time.Millisecond)
 
 		} else {
 
-			// timeout :=
-			msg := udp.ReceiveTimeout()
+			msg = udp.ReceiveTimeout()
 
 			follower.HandleRequest(msg)
 

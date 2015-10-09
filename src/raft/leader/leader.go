@@ -1,5 +1,9 @@
 package leader
 
-// import (
-// 	"raft/settings"
-// )
+import (
+	"raft/settings"
+)
+
+func HandleRequest(string msg) {
+
+}

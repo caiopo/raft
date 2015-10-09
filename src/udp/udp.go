@@ -60,7 +60,7 @@ func Receive() (string, *net.UDPAddr) {
 
 }
 
-func ReceiveCh(ch chan<- string) {
+func ReceiveCh(ch chan<- string, alive *bool) {
 
 	if RecvPort == nil {
 		panic("Receive port not set")
