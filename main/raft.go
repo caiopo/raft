@@ -41,6 +41,7 @@ func main() {
 	var msg string
 
 	for {
+
 		if isLeader {
 
 			listening := true
