@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	TIMEOUT string = "TIMEOUT"
+)
+
 var (
 	RecvPort *net.UDPAddr
 	err      error
@@ -24,8 +28,6 @@ func checkError(err error) {
 
 // Set the port used by Receive()
 func SetRecvPort(portRecv string) {
-
-	// Println(RecvPort)
 
 	port = portRecv
 
@@ -73,15 +75,18 @@ func ReceiveCh(ch chan<- string, alive *bool) {
 
 	buf := make([]byte, 1024)
 
-	n, addr, err := ServerConn.ReadFromUDP(buf)
-	Println("Received ", string(buf[0:n]), " from ", addr)
+	for *alive {
 
-	if err != nil {
-		Println("Error: ", err)
+		n, addr, err := ServerConn.ReadFromUDP(buf)
+		Println("Received ", string(buf[0:n]), " from ", addr)
+
+		if err != nil {
+			Println("Error: ", err)
+		}
+
+		ch <- string(buf[0:n])
+
 	}
-
-	ch <- string(buf[0:n])
-
 }
 
 func SetTimeout(to time.Time) {
@@ -108,7 +113,7 @@ func ReceiveTimeout() string {
 
 	if err != nil {
 		// Println("Error: ", err)
-		return "timeout"
+		return TIMEOUT
 	}
 
 	return string(buf[0:n])
@@ -129,7 +134,7 @@ func Send(msg, target string) {
 
 	// prepend the port to the package
 
-	msg = port + ":" + msg
+	// msg = port + ":" + msg
 
 	buf := []byte(msg)
 

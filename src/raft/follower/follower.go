@@ -2,54 +2,71 @@ package follower
 
 import (
 	. "fmt"
-	// "raft/settings"
-	"strings"
+	"raft"
+	"raft/settings"
 	"udp"
-	"util"
 )
 
-var history []string
+var (
+	history     []string
+	leaderPort  string
+	state       int
+	promisedMsg raft.Message
+)
 
-var leaderPort string
+const (
+	IDLE    int = 0
+	PROMISE int = 1
+)
 
 func init() {
 
 	history = make([]string, 0)
+	state = IDLE
 
 }
 
-func HandleRequest(initMsg string) {
+func HandleRequest(initMsg string, ch chan string) {
 
 	Println(history)
 
-	if initMsg == "timeout" {
-
-		Println(">> Starting election")
+	if initMsg == udp.TIMEOUT {
 
 		startElection()
 
 	} else {
 
-		leaderPort, content, state := separate(initMsg)
+		decompMsg := raft.DecomposeMessage(initMsg)
 
-		if content == "heartbeat" {
+		if decompMsg.State == "heartbeat" {
 
-			udp.Send("alive", leaderPort)
+			aliveMsg := raft.Message{settings.Port, " ", "alive"}
+			go aliveMsg.SendTo(decompMsg.Sender)
 
-		} else if state != "" {
+		} else {
 
-			if state == "proposal" {
+			switch state {
+			case IDLE:
 
-				udp.Send(content+":promise", leaderPort)
+				if decompMsg.State == "proposal" {
 
-				acceptMsg, _ := udp.Receive()
+					promiseMsg := raft.Message{settings.Port, decompMsg.Content, "promise"}
+					go promiseMsg.SendTo(decompMsg.Sender)
 
-				_, confirmation, _ := separate(acceptMsg)
+					state = PROMISE
 
-				if confirmation == "accept" {
+				}
 
-					udp.Send("finished:"+content, leaderPort)
-					history = append(history, content)
+			case PROMISE:
+
+				if decompMsg.State == "accepted" {
+
+					finishedMsg := raft.Message{settings.Port, decompMsg.Content, "finished"}
+					go finishedMsg.SendTo(decompMsg.Sender)
+
+					history = append(history, decompMsg.Content)
+
+					state = IDLE
 
 				}
 
@@ -62,25 +79,58 @@ func HandleRequest(initMsg string) {
 }
 
 func startElection() {
+	Println(">> Starting election")
 
 }
 
-func separate(initMsg string) (target, content, state string) {
+// func HandleRequest(initMsg string, ch chan string) {
 
-	sep := util.CreateSeparator(':')
+// 	Println(history)
 
-	msg := strings.FieldsFunc(initMsg, sep)
+// 	if initMsg == "timeout" {
 
-	target = msg[0]
+// 		Println(">> Starting election")
 
-	content = msg[1]
+// 		startElection()
 
-	if len(msg) == 3 {
+// 	} else {
 
-		state = msg[2]
-	} else {
-		state = ""
-	}
+// 		decompMsg := raft.DecomposeMessage(initMsg)
 
-	return
-}
+// 		if decompMsg.Content == "heartbeat" {
+
+// 			aliveMsg := raft.Message{settings.Port, " ", "alive"}
+
+// 			aliveMsg.SendTo(decompMsg.Sender)
+
+// 			// udp.Send("alive", decompMsg.Sender)
+
+// 		} else if decompMsg.State == "proposal" {
+
+// 			promiseMsg := raft.Message{settings.Port, decompMsg.Content, "promise"}
+
+// 			util.EmptyChan(ch)
+
+// 			go promiseMsg.SendTo(decompMsg.Sender)
+
+// 			tempMsg, _ := udp.Receive()
+
+// 			finalMsg := raft.DecomposeMessage(tempMsg)
+
+// 			if finalMsg.State == "accepted" {
+
+// 				finishedMsg := raft.Message{settings.Port, decompMsg.Content, "finished"}
+
+// 				finishedMsg.SendTo(decompMsg.Sender)
+
+// 				// udp.Send("finished:"+decompMsg.Content, decompMsg.Sender)
+
+// 				history = append(history, decompMsg.Content)
+
+// 			}
+
+// 		}
+
+// 	}
+
+// }

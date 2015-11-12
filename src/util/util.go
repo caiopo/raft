@@ -13,3 +13,11 @@ func CreateSeparator(separate int32) func(rune) bool {
 	}
 
 }
+
+func EmptyChan(ch chan string) {
+
+	for len(ch) > 0 {
+		<-ch
+	}
+
+}
