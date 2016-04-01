@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"net"
-	// "os"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,19 +13,15 @@ import (
 )
 
 const (
-	// PORT   = ":51332"
 	PORT                = ":55123"
 	kubernetesAPIServer = "192.168.15.150:8080"
 )
 
 func main() {
-
-	fmt.Println(find("oi", []string{"oi", "tchau", "bjos"}))
-
 	myip := getMyIP("18")
 
 	if myip == "badIPReturn" {
-		myip := "localhost"
+		myip = "localhost"
 	}
 
 	transport := &raft.HTTPTransport{Address: myip + PORT}
@@ -86,9 +81,6 @@ func getIPsFromKubernetes() []string {
 			theIP := parts[0]
 			theIP = theIP[1 : len(theIP)-1] //remove " chars from IP
 			replicas = append(replicas, theIP)
-			if debug {
-				fmt.Print("[", theIP, "]")
-			}
 		}
 	}
 

@@ -9,22 +9,36 @@ import (
 
 func main() {
 
-	resp, err := http.Get("http://127.0.0.1:5513/node")
+	fmt.Println(getIPsFromKubernetes())
+}
+
+func getIPsFromKubernetes() []string {
+	resp, err := http.Get(kubernetesAPIServer + "/api/v1/endpoints")
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		fmt.Println("ERROR getting endpoints in kubernetes API: ", err.Error())
+		return nil
 	}
-
 	defer resp.Body.Close()
-
-	content, _ := ioutil.ReadAll(resp.Body)
-
-	str := string(content)
-
-	fmt.Println(str)
-
-	if str == "\"1\"" {
-		fmt.Println("yay")
+	contentByte, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		fmt.Println("ERROR reading data from endpoints: ", err2.Error())
+		return nil
 	}
+
+	content := string(contentByte)
+
+	replicas := make([]string, 0)
+
+	words := strings.Split(content, "\"ip\":")
+	for _, v := range words {
+		if v[1:7] == "18.16." { //18.x.x.x, IP of PODS
+			parts := strings.Split(v, ",")
+			theIP := parts[0]
+			theIP = theIP[1 : len(theIP)-1] //remove " chars from IP
+			replicas = append(replicas, theIP)
+		}
+	}
+
+	return replicas
 }
