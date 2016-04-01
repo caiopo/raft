@@ -17,7 +17,7 @@ func main() {
 }
 
 func getIPsFromKubernetes() []string {
-	resp, err := http.Get(kubernetesAPIServer + "/api/v1/endpoints")
+	resp, err := http.Get("http://" + kubernetesAPIServer + "/api/v1/endpoints")
 
 	if err != nil {
 		fmt.Println("ERROR getting endpoints in kubernetes API: ", err.Error())
