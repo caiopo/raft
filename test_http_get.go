@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"strings"
+)
+
+const (
+	kubernetesAPIServer = "192.168.15.150:8080"
 )
 
 func main() {
