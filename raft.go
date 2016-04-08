@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	raft "github.com/mreiferson/pontoon"
+	raft "github.com/caiopo/pontoon"
 )
 
 const (
@@ -19,6 +19,8 @@ const (
 
 func main() {
 	myip := getMyIP("18")
+
+	fmt.Println(myip)
 
 	if myip == "badIPReturn" {
 		myip = "localhost"
@@ -31,18 +33,27 @@ func main() {
 	node.Serve()
 
 	node.Start()
-
 	defer node.Exit()
 
 	ipsAdded := make([]string, 0)
 
 	for {
 		ipsKube := getIPsFromKubernetes()
+
+		fmt.Print("IPs Kube: ")
+		fmt.Println(ipsKube)
+
+		fmt.Print("IPs Added: ")
+		fmt.Println(ipsAdded)
+
 		for _, ipKube := range ipsKube {
-			if !find(ipKube, ipsAdded) {
-				ipsAdded = append(ipsAdded, ipKube)
+			if !find(ipKube, ipsAdded) && (ipKube != myip) {
+				node.AddToCluster(ipKube+PORT)
+				ipsAdded = append(ipsAdded, (ipKube))
 			}
 		}
+
+		time.Sleep(time.Second)
 	}
 
 }
@@ -60,13 +71,13 @@ func getIPsFromKubernetes() []string {
 	resp, err := http.Get("http://" + kubernetesAPIServer + "/api/v1/endpoints")
 
 	if err != nil {
-		fmt.Println("ERROR getting endpoints in kubernetes API: ", err.Error())
+		raft.Debug += fmt.Sprintln("ERROR getting endpoints in kubernetes API: ", err.Error())
 		return nil
 	}
 	defer resp.Body.Close()
 	contentByte, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
-		fmt.Println("ERROR reading data from endpoints: ", err2.Error())
+		raft.Debug += fmt.Sprintln("ERROR reading data from endpoints: ", err2.Error())
 		return nil
 	}
 
