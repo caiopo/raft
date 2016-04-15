@@ -5,55 +5,157 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"strconv"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	raft "github.com/caiopo/pontoon"
 )
 
 const (
-	PORT                = ":55123"
-	kubernetesAPIServer = "192.168.15.150:8080"
+	kubernetesAPIServer = "192.168.1.200:8080"
+	runningInKubernetes = false
 )
 
+var validPorts = []string{":55125", ":55126", ":55127", ":55128", ":55129", ":55130"}
+
 func main() {
-	myip := getMyIP("18")
 
-	fmt.Println(myip)
+	if runningInKubernetes {
 
-	if myip == "badIPReturn" {
-		myip = "localhost"
-	}
+		myip := getMyIP("18")
 
-	transport := &raft.HTTPTransport{Address: myip + PORT}
-	logger := &raft.Log{}
-	applyer := &raft.StateMachine{}
-	node := raft.NewNode(myip, transport, logger, applyer)
-	node.Serve()
+		fmt.Println(myip)
 
-	node.Start()
-	defer node.Exit()
-
-	ipsAdded := make([]string, 0)
-
-	for {
-		ipsKube := getIPsFromKubernetes()
-
-		fmt.Print("IPs Kube: ")
-		fmt.Println(ipsKube)
-
-		fmt.Print("IPs Added: ")
-		fmt.Println(ipsAdded)
-
-		for _, ipKube := range ipsKube {
-			if !find(ipKube, ipsAdded) && (ipKube != myip) {
-				node.AddToCluster(ipKube+PORT)
-				ipsAdded = append(ipsAdded, (ipKube))
-			}
+		if myip == "badIPReturn" {
+			myip = "localhost"
 		}
 
-		time.Sleep(time.Second)
+		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
+		logger := &raft.Log{}
+		applyer := &raft.StateMachine{}
+		node := raft.NewNode(myip, transport, logger, applyer)
+		node.Serve()
+
+		node.Start()
+		defer node.Exit()
+
+		ipsAdded := make([]string, 0)
+
+		for {
+			ipsKube := getIPsFromKubernetes()
+
+			fmt.Print("IPs Kube: ")
+			fmt.Println(ipsKube)
+
+			fmt.Print("IPs Added: ")
+			fmt.Println(ipsAdded)
+
+			for _, ipKube := range ipsKube {
+				if !find(ipKube, ipsAdded) && (ipKube != myip) {
+					node.AddToCluster(ipKube + raft.PORT)
+					ipsAdded = append(ipsAdded, (ipKube))
+				}
+			}
+
+			time.Sleep(time.Second)
+		}
+
+	} else {
+		myip := getMyIP("")
+		fmt.Println(myip)
+
+		myport := ":" + os.Args[1]
+
+		if !find(myport, validPorts) {
+			panic("port must be between 55125 and 55130")
+		}
+
+		transport := &raft.HTTPTransport{Address: myip + myport}
+		logger := &raft.Log{}
+		applyer := &raft.StateMachine{}
+		node := raft.NewNode(myip, transport, logger, applyer)
+		node.Serve()
+
+		node.Start()
+		defer node.Exit()
+
+		// cluster := make([]string, 0)
+
+		cluster := os.Args[2:]
+
+		// for _, ip := range =os.Args[2:] {
+		// 	if ip != myip {
+		// 		cluster = append(cluster, ip)
+		// 	}
+		// }
+
+		fmt.Println(cluster)
+
+		mutex := &sync.Mutex{}
+		ipsAdded := make([]string, 0)
+
+		for {
+
+			for _, remoteip := range cluster {
+
+				go func(nodeip string, mut *sync.Mutex) {
+					// fmt.Println("node: " + nodeip)
+
+					for _, remoteport := range validPorts {
+						// fmt.Println("port: " + remoteport)
+
+						if remoteport == myport && nodeip == myip {
+							continue
+						}
+
+						if find(nodeip+remoteport, ipsAdded) {
+							continue
+						}
+
+						go func(ip string, port string, m *sync.Mutex) {
+
+							// fmt.Println("get: http://" + ip + port + "/ping")
+
+							resp, err := http.Get("http://" + ip + port + "/ping")
+
+							if err != nil {
+								return
+							}
+
+							defer resp.Body.Close()
+
+							body, err := ioutil.ReadAll(resp.Body)
+
+							if err != nil {
+								return
+							}
+
+							ss := string(body[:])
+
+							fmt.Println(ss)
+
+							if ss != "" {
+								m.Lock()
+								ipsAdded = append(ipsAdded, ip+port)
+								node.AddToCluster(ip + port)
+								m.Unlock()
+
+							}
+
+						}(nodeip, remoteport, mut)
+
+					}
+
+				}(remoteip, mutex)
+
+			}
+
+			fmt.Println(ipsAdded)
+			time.Sleep(time.Second)
+
+		}
 	}
 
 }
@@ -71,13 +173,13 @@ func getIPsFromKubernetes() []string {
 	resp, err := http.Get("http://" + kubernetesAPIServer + "/api/v1/endpoints")
 
 	if err != nil {
-		raft.Debug += fmt.Sprintln("ERROR getting endpoints in kubernetes API: ", err.Error())
+		// raft.Debug += fmt.Sprintln("ERROR getting endpoints in kubernetes API: ", err.Error())
 		return nil
 	}
 	defer resp.Body.Close()
 	contentByte, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
-		raft.Debug += fmt.Sprintln("ERROR reading data from endpoints: ", err2.Error())
+		// raft.Debug += fmt.Sprintln("ERROR reading data from endpoints: ", err2.Error())
 		return nil
 	}
 
@@ -117,74 +219,31 @@ func getMyIP(firstChars string) string {
 	return "badIPReturn"
 }
 
-func createNodes(num int) []*raft.Node {
-	var nodes []*raft.Node
+// func findLeader(node *raft.Node) (ip string) {
 
-	for i := 0; i < num; i++ {
-		transport := &raft.HTTPTransport{Address: "127.0.20.0:5123" + strconv.Itoa(i)}
-		logger := &raft.Log{}
-		applyer := &raft.StateMachine{}
-		node := raft.NewNode(fmt.Sprintf("%d", i), transport, logger, applyer)
-		nodes = append(nodes, node)
-		nodes[i].Serve()
-	}
+// 	ipchan := make(chan string)
 
-	// let them start serving
-	time.Sleep(100 * time.Millisecond)
+// 	for _, n := range node.Cluster {
+// 		go func(ip string) {
+// 			resp, err := http.Get(ip + raft.PORT + "/node")
+// 			if err == nil {
+// 				defer resp.Body.Close()
 
-	for i := 0; i < len(nodes); i++ {
-		for j := 0; j < len(nodes); j++ {
-			if j != i {
-				nodes[i].AddToCluster(nodes[j].Transport.String())
-			}
-		}
-	}
+// 				body, err := ioutil.ReadAll(resp.Body)
+// 				if err == nil {
+// 					ss := string(body[:])
+// 					c := "1"
+// 					b := string(ss[1])
 
-	for _, node := range nodes {
-		node.Start()
-	}
+// 					fmt.Println(ss)
 
-	return nodes
-}
+// 					if b == c {
+// 						ipchan <- ip
+// 					}
+// 				}
+// 			}
+// 		}(n.ID)
+// 	}
 
-func countLeaders(nodes []*raft.Node) int {
-	leaders := 0
-	for i := 0; i < len(nodes); i++ {
-		nodes[i].RLock()
-		if nodes[i].State == raft.Leader {
-			leaders++
-		}
-		nodes[i].RUnlock()
-	}
-	return leaders
-}
-
-func findLeader(nodes []*raft.Node) *raft.Node {
-	for i := 0; i < len(nodes); i++ {
-		nodes[i].RLock()
-		if nodes[i].State == raft.Leader {
-			nodes[i].RUnlock()
-			return nodes[i]
-		}
-		nodes[i].RUnlock()
-	}
-	return nil
-}
-
-func startCluster(num int) ([]*raft.Node, *raft.Node) {
-	nodes := createNodes(num)
-	for {
-		time.Sleep(50 * time.Millisecond)
-		if countLeaders(nodes) == 1 {
-			break
-		}
-	}
-	leader := findLeader(nodes)
-	return nodes, leader
-}
-
-func stopCluster(nodes []*raft.Node) {
-	for _, node := range nodes {
-		node.Exit()
-	}
-}
+// 	return <-ipchan
+// }
