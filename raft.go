@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -13,16 +14,10 @@ import (
 	raft "github.com/caiopo/pontoon"
 )
 
-const (
-	kubernetesAPIServer = "192.168.1.200:8080"
-	runningInKubernetes = false
-)
-
-var validPorts = []string{":55125", ":55126", ":55127", ":55128", ":55129", ":55130"}
-
 func main() {
 
-	if runningInKubernetes {
+	if raft.RunningInKubernetes {
+		log.SetOutput(ioutil.Discard)
 
 		myip := getMyIP("18")
 
@@ -63,12 +58,12 @@ func main() {
 		}
 
 	} else {
-		myip := getMyIP("")
+		myip := getMyIP("150")
 		fmt.Println(myip)
 
 		myport := ":" + os.Args[1]
 
-		if !find(myport, validPorts) {
+		if !find(myport, raft.ValidPorts) {
 			panic("port must be between 55125 and 55130")
 		}
 
@@ -82,6 +77,8 @@ func main() {
 		defer node.Exit()
 
 		// cluster := make([]string, 0)
+
+		// fmt.Println(node.Transport.String())
 
 		cluster := os.Args[2:]
 
@@ -98,26 +95,21 @@ func main() {
 
 		for {
 
-			for _, remoteip := range cluster {
+			for _, ip := range cluster {
 
-				go func(nodeip string, mut *sync.Mutex) {
-					// fmt.Println("node: " + nodeip)
+				go func(ip string) {
 
-					for _, remoteport := range validPorts {
-						// fmt.Println("port: " + remoteport)
+					for _, port := range raft.ValidPorts {
 
-						if remoteport == myport && nodeip == myip {
+						if port == myport && ip == myip {
 							continue
 						}
 
-						if find(nodeip+remoteport, ipsAdded) {
+						if find(ip+port, ipsAdded) {
 							continue
 						}
 
-						go func(ip string, port string, m *sync.Mutex) {
-
-							// fmt.Println("get: http://" + ip + port + "/ping")
-
+						go func(ip string, port string) {
 							resp, err := http.Get("http://" + ip + port + "/ping")
 
 							if err != nil {
@@ -137,18 +129,17 @@ func main() {
 							fmt.Println(ss)
 
 							if ss != "" {
-								m.Lock()
+								mutex.Lock()
 								ipsAdded = append(ipsAdded, ip+port)
 								node.AddToCluster(ip + port)
-								m.Unlock()
-
+								mutex.Unlock()
 							}
 
-						}(nodeip, remoteport, mut)
+						}(ip, port)
 
 					}
 
-				}(remoteip, mutex)
+				}(ip)
 
 			}
 
@@ -170,7 +161,7 @@ func find(needle string, haystack []string) bool {
 }
 
 func getIPsFromKubernetes() []string {
-	resp, err := http.Get("http://" + kubernetesAPIServer + "/api/v1/endpoints")
+	resp, err := http.Get("http://" + raft.KubernetesAPIServer + "/api/v1/endpoints")
 
 	if err != nil {
 		// raft.Debug += fmt.Sprintln("ERROR getting endpoints in kubernetes API: ", err.Error())
