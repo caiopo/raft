@@ -35,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(os.Args == 6) {
+	if len(os.Args) == 6 {
 		path = os.Args[5]
 	}
 
