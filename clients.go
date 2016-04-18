@@ -83,7 +83,7 @@ func client(clientID int) {
 
 		requestID := 1000*clientID + r
 
-		target := fmt.Sprintf("%s/command/%d/%s", targetIP, requestID, requestBody)
+		target := fmt.Sprintf("%s/request/%d/%s", targetIP, requestID, requestBody)
 
 		t0 = time.Now()
 
