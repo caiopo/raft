@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -48,7 +48,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	targetIP := "http://" + os.Args[3]
+	targetIP = "http://" + os.Args[3]
 
 	nReplicas := os.Args[4]
 
@@ -87,7 +87,7 @@ func client(clientID int) {
 			diff := t1.Sub(t0).Nanoseconds()
 
 			// client;request;time;requestBody
-			go writeToFile(fmt.Printf("%d;%d;%d;%s", clientID, r, diff, requestBody))
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%s", clientID, r, diff, requestBody))
 
 		} else {
 			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, r))
