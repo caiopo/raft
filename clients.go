@@ -28,19 +28,21 @@ var (
 
 func main() {
 
+	var err error
+
 	if len(os.Args) < 5 {
 		fmt.Println(commandMessage)
 		os.Exit(1)
 	}
 
-	nClients, err := strconv.Atoi(os.Args[1])
+	nClients, err = strconv.Atoi(os.Args[1])
 
 	if err != nil {
 		fmt.Println(commandMessage, ": ", err.Error())
 		os.Exit(1)
 	}
 
-	nRequests, err := strconv.Atoi(os.Args[2])
+	nRequests, err = strconv.Atoi(os.Args[2])
 
 	if err != nil {
 		fmt.Println(commandMessage, ": ", err.Error())
@@ -108,19 +110,19 @@ func client(clientID int) {
 }
 
 func writeToFile(s string) {
-	// mutex.Lock()
+	mutex.Lock()
 
-	// _, err := writer.WriteString(s + "\n")
+	_, err := writer.WriteString(s + "\n")
 
-	// writer.Flush()
+	writer.Flush()
 
 	fmt.Println(s)
 
-	// mutex.Unlock()
+	mutex.Unlock()
 
-	// if err != nil {
-	// 	os.Exit(1)
-	// }
+	if err != nil {
+		os.Exit(1)
+	}
 
 }
 
