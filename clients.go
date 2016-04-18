@@ -70,8 +70,6 @@ func main() {
 
 	wg.Wait()
 	file.Sync()
-
-	time.Sleep(10 * time.Second)
 }
 
 func client(clientID int) {
@@ -79,29 +77,31 @@ func client(clientID int) {
 
 	for r := 0; r < nRequests; r++ {
 
-		target := makeIP(targetIP, clientID, r) + requestBody
+		requestID := 1000*clientID + r
+
+		target := fmt.Sprintf("%s/command/%d/%s", targetIP, requestID, requestBody)
 
 		t0 = time.Now()
 
 		resp, err := http.Get(target)
 
 		if err != nil {
-			go writeToFile(fmt.Sprintf("Error on HTTP/GET! Client: %d, Request %d", clientID, r))
+			go writeToFile(fmt.Sprintf("Error on HTTP/GET! Client: %d, Request %d", clientID, requestID))
 			continue
 		}
 
 		defer resp.Body.Close()
 
-		if resp.StatusCode == 299 {
+		if resp.StatusCode == 299 || resp.StatusCode == 200 { // request accepted
 			t1 = time.Now()
 
 			diff := t1.Sub(t0).Nanoseconds()
 
 			// client;request;time;requestBody
-			go writeToFile(fmt.Sprintf("%d;%d;%d;%s", clientID, r, diff, requestBody))
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%s", clientID, requestID, diff, requestBody))
 
 		} else {
-			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, r))
+			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, requestID))
 		}
 
 	}
@@ -124,8 +124,4 @@ func writeToFile(s string) {
 		os.Exit(1)
 	}
 
-}
-
-func makeIP(baseIP string, clientID int, requestID int) string {
-	return fmt.Sprintf("%s/command/%d/", baseIP, 1000*clientID+requestID)
 }
