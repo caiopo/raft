@@ -52,7 +52,7 @@ func main() {
 
 	nReplicas := os.Args[4]
 
-	file, err = os.Create(fmt.Sprintf("raft_test_c%dreq%drep%d.txt", nClients, nRequests, nReplicas))
+	file, err = os.Create(fmt.Sprintf("raft_test_c%dreq%drep%s.txt", nClients, nRequests, nReplicas))
 
 	wg.Add(nClients)
 
