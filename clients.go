@@ -28,7 +28,6 @@ var (
 
 func main() {
 
-	bufio.new
 	if len(os.Args) < 5 {
 		fmt.Println(commandMessage)
 		os.Exit(1)
