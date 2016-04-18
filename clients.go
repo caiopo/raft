@@ -98,7 +98,7 @@ func client(clientID int) {
 			diff := t1.Sub(t0).Nanoseconds()
 
 			// client;request;time(ns);time(ms);requestBody
-			go writeToFile(fmt.Sprintf("%d;%d;%d;%s", clientID, requestID, diff, int64(diff/1000000), requestBody))
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%s", clientID, requestID, diff, int64(diff/1000000), requestBody))
 
 		} else {
 			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, requestID))
