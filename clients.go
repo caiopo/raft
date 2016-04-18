@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const commandMessage = "Specify: n-clients n-requests ip:port n-replicas[this, just for logging]"
+const commandMessage = "Specify: n-clients n-requests n-replicas[just for logging] ip:port (optional: path)"
 
 const requestBody = "BODY"
 
@@ -21,9 +21,9 @@ var (
 	file   *os.File
 	writer *bufio.Writer
 
-	nClients, nRequests, nReplicas int
+	nClients, nRequests int
 
-	targetIP string
+	targetIP, path string
 )
 
 func main() {
@@ -33,6 +33,10 @@ func main() {
 	if len(os.Args) < 5 {
 		fmt.Println(commandMessage)
 		os.Exit(1)
+	}
+
+	if len(os.Args == 6) {
+		path = os.Args[5]
 	}
 
 	nClients, err = strconv.Atoi(os.Args[1])
@@ -49,11 +53,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	targetIP = "http://" + os.Args[3]
+	nReplicas := os.Args[3]
 
-	nReplicas := os.Args[4]
+	targetIP = "http://" + os.Args[4]
 
-	file, err = os.Create(fmt.Sprintf("raft_test_c%dreq%drep%s.txt", nClients, nRequests, nReplicas))
+	file, err = os.Create(fmt.Sprintf(path+"raft_test_c%dreq%drep%s.txt", nClients, nRequests, nReplicas))
 
 	if err != nil {
 		fmt.Println("Can't create file")
