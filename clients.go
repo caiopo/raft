@@ -108,19 +108,19 @@ func client(clientID int) {
 }
 
 func writeToFile(s string) {
-	mutex.Lock()
+	// mutex.Lock()
 
-	_, err := writer.WriteString(s + "\n")
+	// _, err := writer.WriteString(s + "\n")
 
-	writer.Flush()
+	// writer.Flush()
 
 	fmt.Println(s)
 
-	mutex.Unlock()
+	// mutex.Unlock()
 
-	if err != nil {
-		os.Exit(1)
-	}
+	// if err != nil {
+	// 	os.Exit(1)
+	// }
 
 }
 
