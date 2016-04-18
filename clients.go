@@ -64,7 +64,7 @@ func main() {
 
 	wg.Add(nClients)
 
-	for c := 0; c < nClients; c++ {
+	for c := 1; c <= nClients; c++ {
 		go client(c)
 	}
 
@@ -97,8 +97,8 @@ func client(clientID int) {
 
 			diff := t1.Sub(t0).Nanoseconds()
 
-			// client;request;time;requestBody
-			go writeToFile(fmt.Sprintf("%d;%d;%d;%s", clientID, requestID, diff, requestBody))
+			// client;request;time(ns);time(ms);requestBody
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%s", clientID, requestID, diff, int64(diff/1000000), requestBody))
 
 		} else {
 			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, requestID))
