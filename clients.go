@@ -61,6 +61,7 @@ func main() {
 	}
 
 	wg.Wait()
+	file.Sync()
 }
 
 func client(clientID int) {
