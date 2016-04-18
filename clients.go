@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,11 +17,9 @@ const requestBody = "BODY"
 var (
 	wg sync.WaitGroup
 
-	mutex sync.Mutex
-
-	startTime time.Time
-
-	file *os.File
+	mutex  sync.Mutex
+	file   *os.File
+	writer *bufio.Writer
 
 	nClients, nRequests, nReplicas int
 
@@ -29,6 +28,7 @@ var (
 
 func main() {
 
+	bufio.new
 	if len(os.Args) < 5 {
 		fmt.Println(commandMessage)
 		os.Exit(1)
@@ -54,6 +54,13 @@ func main() {
 
 	file, err = os.Create(fmt.Sprintf("raft_test_c%dreq%drep%s.txt", nClients, nRequests, nReplicas))
 
+	if err != nil {
+		fmt.Println("Can't create file")
+		os.Exit(1)
+	}
+
+	writer = bufio.NewWriter(file)
+
 	wg.Add(nClients)
 
 	for c := 0; c < nClients; c++ {
@@ -62,6 +69,7 @@ func main() {
 
 	wg.Wait()
 	file.Sync()
+	writer.Flush()
 }
 
 func client(clientID int) {
@@ -102,7 +110,7 @@ func client(clientID int) {
 func writeToFile(s string) {
 	mutex.Lock()
 
-	_, err := file.WriteString(s + "\n")
+	_, err := writer.WriteString(s + "\n")
 
 	fmt.Println(s)
 
