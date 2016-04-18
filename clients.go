@@ -68,7 +68,8 @@ func main() {
 
 	wg.Wait()
 	file.Sync()
-	writer.Flush()
+
+	time.Sleep(10 * time.Second)
 }
 
 func client(clientID int) {
@@ -110,6 +111,8 @@ func writeToFile(s string) {
 	mutex.Lock()
 
 	_, err := writer.WriteString(s + "\n")
+
+	writer.Flush()
 
 	fmt.Println(s)
 
