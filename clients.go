@@ -64,7 +64,7 @@ func main() {
 
 	targetIP = "http://" + os.Args[4]
 
-	file, err = os.Create(fmt.Sprintf(path+"raft_test_c%dreq%drep%s.csv", nClients, nRequests, nReplicas))
+	file, err = os.Create(fmt.Sprintf(path+"raft_test_c%dreq%drep%d.csv", nClients, nRequests, nReplicas))
 
 	if err != nil {
 		fmt.Println("Can't create file")
@@ -123,7 +123,7 @@ func client(clientID int) {
 		elapsed := time.Now().Sub(timeInit).Nanoseconds()
 
 		// client;request;time(ns);time since start;requestBody;total clients;requests;replicas
-		go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%s", clientID, requestID, diff, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
+		go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%d", clientID, requestID, diff, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
 
 	}
 
@@ -135,7 +135,7 @@ func writeToFile(s string) {
 
 	_, err := writer.WriteString(s + "\n")
 
-	// writer.Flush()
+	writer.Flush()
 
 	fmt.Println(s)
 
