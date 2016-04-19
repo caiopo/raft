@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -96,12 +97,18 @@ func client(clientID int) {
 
 		t0 = time.Now()
 
-		resp, err := http.Get(target)
+		err := errors.New("")
 
-		if err != nil {
-			go writeToFile(fmt.Sprintf("Error on HTTP/GET! Client: %d, Request %d", clientID, requestID))
-			continue
+		var resp *http.Response
+
+		for err != nil {
+			resp, err = http.Get(target)
 		}
+
+		// if err != nil {
+		// 	go writeToFile(fmt.Sprintf("Error on HTTP/GET! Client: %d, Request %d", clientID, requestID))
+		// 	continue
+		// }
 
 		defer resp.Body.Close()
 
