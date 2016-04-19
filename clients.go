@@ -97,12 +97,16 @@ func client(clientID int) {
 
 		t0 = time.Now()
 
-		err := errors.New("")
-
 		var resp *http.Response
 
-		for err != nil {
+		err := errors.New("")
+
+		for try := 0; try < 10; try++ {
 			resp, err = http.Get(target)
+
+			if err == nil {
+				break
+			}
 		}
 
 		// if err != nil {
