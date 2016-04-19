@@ -21,9 +21,11 @@ var (
 	file   *os.File
 	writer *bufio.Writer
 
-	nClients, nRequests int
+	nClients, nRequests, nReplicas int
 
 	targetIP, path string
+
+	timeInit time.Time
 )
 
 func main() {
@@ -53,11 +55,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	nReplicas := os.Args[3]
+	nReplicas, err = strconv.Atoi(os.Args[3])
+
+	if err != nil {
+		fmt.Println(commandMessage, ": ", err.Error())
+		os.Exit(1)
+	}
 
 	targetIP = "http://" + os.Args[4]
 
-	file, err = os.Create(fmt.Sprintf(path+"raft_test_c%dreq%drep%s.txt", nClients, nRequests, nReplicas))
+	file, err = os.Create(fmt.Sprintf(path+"raft_test_c%dreq%drep%s.csv", nClients, nRequests, nReplicas))
 
 	if err != nil {
 		fmt.Println("Can't create file")
@@ -67,6 +74,8 @@ func main() {
 	writer = bufio.NewWriter(file)
 
 	wg.Add(nClients)
+
+	timeInit = time.Now()
 
 	for c := 1; c <= nClients; c++ {
 		go client(c)
@@ -96,17 +105,25 @@ func client(clientID int) {
 
 		defer resp.Body.Close()
 
-		if resp.StatusCode == 299 || resp.StatusCode == 200 { // request accepted
-			t1 = time.Now()
+		var leader int
 
-			diff := t1.Sub(t0).Nanoseconds()
-
-			// client;request;time(ns);time(ms);requestBody
-			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%s", clientID, requestID, diff, int64(diff/1000000), requestBody))
-
+		if resp.StatusCode == 290 {
+			leader = 0
+		} else if resp.StatusCode == 291 {
+			leader = 1
 		} else {
 			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, requestID))
+			return
 		}
+
+		t1 = time.Now()
+
+		diff := t1.Sub(t0).Nanoseconds()
+
+		elapsed := time.Now().Sub(timeInit).Nanoseconds()
+
+		// client;request;time(ns);time since start;requestBody;total clients;requests;replicas
+		go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%s", clientID, requestID, diff, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
 
 	}
 
@@ -118,7 +135,7 @@ func writeToFile(s string) {
 
 	_, err := writer.WriteString(s + "\n")
 
-	writer.Flush()
+	// writer.Flush()
 
 	fmt.Println(s)
 
@@ -127,5 +144,4 @@ func writeToFile(s string) {
 	if err != nil {
 		os.Exit(1)
 	}
-
 }
