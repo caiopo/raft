@@ -148,7 +148,7 @@ func writeToFile(s string) {
 
 	writer.Flush()
 
-	fmt.Println(s)
+	// fmt.Println(s)
 
 	mutex.Unlock()
 

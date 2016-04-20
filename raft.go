@@ -209,32 +209,3 @@ func getMyIP(firstChars string) string {
 	}
 	return "badIPReturn"
 }
-
-// func findLeader(node *raft.Node) (ip string) {
-
-// 	ipchan := make(chan string)
-
-// 	for _, n := range node.Cluster {
-// 		go func(ip string) {
-// 			resp, err := http.Get(ip + raft.PORT + "/node")
-// 			if err == nil {
-// 				defer resp.Body.Close()
-
-// 				body, err := ioutil.ReadAll(resp.Body)
-// 				if err == nil {
-// 					ss := string(body[:])
-// 					c := "1"
-// 					b := string(ss[1])
-
-// 					fmt.Println(ss)
-
-// 					if b == c {
-// 						ipchan <- ip
-// 					}
-// 				}
-// 			}
-// 		}(n.ID)
-// 	}
-
-// 	return <-ipchan
-// }
