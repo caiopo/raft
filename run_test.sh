@@ -1,25 +1,27 @@
 #! /bin/bash
 
-#alias kub="sudo /opt/bin/kubectl --server=192.168.15.150:8080"
+ip=$1
+path=$2
+rep=$3
 
-for r in 50 100; do
-	for c in 4 8 16 32; do
-		
-		echo "Starting the cluster"
+req=50
 
-		sudo /opt/bin/kubectl --server=192.168.15.150:8080 scale rc raft --replicas=0
-		sudo /opt/bin/kubectl --server=192.168.15.150:8080 scale rc raft --replicas=$1
 
-		read -n 1 -p "Check if the cluster is ready"
+for cli in 4 8 16 32; do
 
-		echo "Starting test. Clients: $c Replicas: $r"
+	echo "Starting the cluster"
 
-		./clients $c $r $1 192.168.15.103:32480 tests/rep$1 > /dev/null
+	sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc raft --replicas=0
+	sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc raft --replicas=$rep
 
-		for i in $(seq 1 $1); do
-			curl 192.168.15.103:32480/hash
-			echo ""
-		done
+	read -n 1 -p "Check if the cluster is ready"
+
+	echo "Starting test. Clients: $cli Replicas: $rep"
+
+	./clients $cli $req $rep $ip $path > /dev/null
+
+	for i in $(seq 1 $rep); do
+		curl $ip/hash
+		echo ""
 	done
 done
-

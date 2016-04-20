@@ -101,18 +101,12 @@ func client(clientID int) {
 
 		err := errors.New("")
 
-		for try := 0; try < 10; try++ {
-			resp, err = http.Get(target)
+		resp, err = http.Get(target)
 
-			if err == nil {
-				break
-			}
+		if err != nil {
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%d", 0, requestID, diff, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
+			continue
 		}
-
-		// if err != nil {
-		// 	go writeToFile(fmt.Sprintf("Error on HTTP/GET! Client: %d, Request %d", clientID, requestID))
-		// 	continue
-		// }
 
 		resp.Body.Close()
 
@@ -123,7 +117,7 @@ func client(clientID int) {
 		} else if resp.StatusCode == 291 {
 			leader = 1
 		} else {
-			go writeToFile(fmt.Sprintf("Error on command! Status code: %d Client: %d Request %d", resp.StatusCode, clientID, requestID))
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%d", 0, requestID, diff, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
 			return
 		}
 
