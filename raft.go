@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	raft "github.com/caiopo/pontoon"
@@ -58,16 +57,10 @@ func main() {
 		}
 
 	} else {
-		myip := getMyIP("150")
+		myip := os.Args[1]
 		fmt.Println(myip)
 
-		myport := ":" + os.Args[1]
-
-		if !find(myport, raft.ValidPorts) {
-			panic("port must be between 55125 and 55130")
-		}
-
-		transport := &raft.HTTPTransport{Address: myip + myport}
+		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
 		logger := &raft.Log{}
 		applyer := &raft.StateMachine{}
 		node := raft.NewNode(myip, transport, logger, applyer)
@@ -76,77 +69,14 @@ func main() {
 		node.Start()
 		defer node.Exit()
 
-		// cluster := make([]string, 0)
-
-		// fmt.Println(node.Transport.String())
-
-		cluster := os.Args[2:]
-
-		// for _, ip := range =os.Args[2:] {
-		// 	if ip != myip {
-		// 		cluster = append(cluster, ip)
-		// 	}
-		// }
-
-		fmt.Println(cluster)
-
-		mutex := &sync.Mutex{}
-		ipsAdded := make([]string, 0)
+		for _, ip := range os.Args[2:] {
+			node.AddToCluster(ip + raft.PORT)
+		}
 
 		for {
-
-			for _, ip := range cluster {
-
-				go func(ip string) {
-
-					for _, port := range raft.ValidPorts {
-
-						if port == myport && ip == myip {
-							continue
-						}
-
-						if find(ip+port, ipsAdded) {
-							continue
-						}
-
-						go func(ip string, port string) {
-							resp, err := http.Get("http://" + ip + port + "/ping")
-
-							if err != nil {
-								return
-							}
-
-							defer resp.Body.Close()
-
-							body, err := ioutil.ReadAll(resp.Body)
-
-							if err != nil {
-								return
-							}
-
-							ss := string(body[:])
-
-							fmt.Println(ss)
-
-							if ss != "" {
-								mutex.Lock()
-								ipsAdded = append(ipsAdded, ip+port)
-								node.AddToCluster(ip + port)
-								mutex.Unlock()
-							}
-
-						}(ip, port)
-
-					}
-
-				}(ip)
-
-			}
-
-			fmt.Println(ipsAdded)
 			time.Sleep(time.Second)
-
 		}
+
 	}
 
 }
@@ -209,3 +139,59 @@ func getMyIP(firstChars string) string {
 	}
 	return "badIPReturn"
 }
+
+// 	for {
+
+// 		for _, ip := range cluster {
+
+// 			go func(ip string) {
+
+// 				for _, port := range raft.ValidPorts {
+
+// 					if port == myport && ip == myip {
+// 						continue
+// 					}
+
+// 					if find(ip+port, ipsAdded) {
+// 						continue
+// 					}
+
+// 					go func(ip string, port string) {
+// 						resp, err := http.Get("http://" + ip + port + "/ping")
+
+// 						if err != nil {
+// 							return
+// 						}
+
+// 						defer resp.Body.Close()
+
+// 						body, err := ioutil.ReadAll(resp.Body)
+
+// 						if err != nil {
+// 							return
+// 						}
+
+// 						ss := string(body[:])
+
+// 						fmt.Println(ss)
+
+// 						if ss != "" {
+// 							mutex.Lock()
+// 							ipsAdded = append(ipsAdded, ip+port)
+// 							node.AddToCluster(ip + port)
+// 							mutex.Unlock()
+// 						}
+
+// 					}(ip, port)
+
+// 				}
+
+// 			}(ip)
+
+// 		}
+
+// 		fmt.Println(ipsAdded)
+// 		time.Sleep(time.Second)
+
+// 	}
+// }
