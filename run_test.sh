@@ -1,5 +1,5 @@
 #! /bin/bash
-q
+
 ip=$1
 path=$2
 rep=$3
