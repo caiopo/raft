@@ -110,7 +110,7 @@ func client(clientID int) {
 
 		if err != nil {
 			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%d", 0, requestID, 0, 0, 0, requestBody, nClients, nRequests, nReplicas))
-			fmt.Printf("c%d: %s\n", clientID, ip)
+			go fmt.Println(err.Error())
 			continue
 		}
 
