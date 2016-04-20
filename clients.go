@@ -65,7 +65,7 @@ func main() {
 
 	targetIP = "http://" + os.Args[4]
 
-	file, err = os.Create(fmt.Sprintf(path+"raft_test_c%dreq%drep%d.csv", nClients, nRequests, nReplicas))
+	file, err = os.Create(fmt.Sprintf(path+"/raft_test_c%dreq%drep%d.csv", nClients, nRequests, nReplicas))
 
 	if err != nil {
 		fmt.Println("Can't create file")
@@ -114,7 +114,7 @@ func client(clientID int) {
 		// 	continue
 		// }
 
-		defer resp.Body.Close()
+		resp.Body.Close()
 
 		var leader int
 
