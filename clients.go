@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -99,7 +98,7 @@ func client(clientID int) {
 
 		var resp *http.Response
 
-		err := errors.New("")
+		var err error
 
 		resp, err = http.Get(target)
 
@@ -117,7 +116,7 @@ func client(clientID int) {
 		} else if resp.StatusCode == 291 {
 			leader = 1
 		} else {
-			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%d", 0, requestID, diff, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
+			go writeToFile(fmt.Sprintf("%d;%d;%d;%d;%d;%s;%d;%d;%d", 0, requestID, 0, elapsed, leader, requestBody, nClients, nRequests, nReplicas))
 			return
 		}
 
