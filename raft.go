@@ -55,7 +55,6 @@ func main() {
 
 			time.Sleep(time.Second)
 		}
-
 	} else {
 		myip := os.Args[1]
 		fmt.Println(myip)
@@ -76,9 +75,7 @@ func main() {
 		for {
 			time.Sleep(time.Second)
 		}
-
 	}
-
 }
 
 func find(needle string, haystack []string) bool {
