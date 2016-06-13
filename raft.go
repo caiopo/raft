@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-
 	if raft.RunningInKubernetes {
 		log.SetOutput(ioutil.Discard)
 
