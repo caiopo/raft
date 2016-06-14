@@ -19,7 +19,10 @@ read -n1 -s
 
 ab -n $requests -c $clients -s 5 -e tests/tests_kube/raft_ku_$clients_$requests_client.csv $url/request
 
-sleep 2
+echo "Done"
+
+read -n1 -s
+
 
 for i in seq 10; do
 	curl $url/hash
