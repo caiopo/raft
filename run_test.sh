@@ -1,8 +1,9 @@
 #! /bin/bash
 
-requests=$1
-clients=$2
+requests=$2
+clients=$3
 replicas=3
+url=http://192.168.1.201:$1
 
 echo "Preparing... requests=$requests clients=$clients replicas=$replicas"
 
@@ -16,6 +17,12 @@ echo "Press enter to continue"
 
 read -n1 -s
 
-ab -n $requests -c $clients -s 5 -e tests/tests_kube/raft_ku_${clients}_${requests}_client.csv http://192.168.1.201:55123/request
+ab -n $requests -c $clients -s 5 -e tests/tests_kube/raft_ku_$clients_$requests_client.csv $url/request
+
+sleep 2
+
+for i in seq 10; do
+	curl $url/hash
+done
 
 echo "Done"
