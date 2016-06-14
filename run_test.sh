@@ -8,9 +8,9 @@ url=http://192.168.1.201:$1
 echo "Preparing... requests=$requests clients=$clients replicas=$replicas"
 
 # reset the cluster
-kub scale rc raft --replicas=0
+sudo /opt/bin/kubectl --server=192.168.15.150:8080 scale rc raft --replicas=0
 sleep 5
-kub scale rc raft --replicas=$replicas
+sudo /opt/bin/kubectl --server=192.168.15.150:8080 scale rc raft --replicas=$replicas
 
 echo "Ready to run! requests=$requests clients=$clients replicas=$replicas"
 echo "Press enter to continue"
