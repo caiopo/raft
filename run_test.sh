@@ -9,7 +9,7 @@ echo "Preparing... requests=$requests clients=$clients replicas=$replicas"
 
 # reset the cluster
 sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc raft --replicas=0
-sleep 5
+sleep 10
 sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc raft --replicas=$replicas
 
 echo "Ready to run! requests=$requests clients=$clients replicas=$replicas"
@@ -17,15 +17,16 @@ echo "Press enter to continue"
 
 read -n1 -s
 
-ab -n $requests -c $clients -s 5 -e tests/tests_kube/raft_ku_$clients_$requests_client.csv $url/request
+ab -n $requests -c $clients -s 5 -e tests/tests_kube/raft_ku_${clients}_${requests}_client.csv $url/request
 
 echo "Done"
 
 read -n1 -s
 
 
-for i in seq 10; do
+for i in $(seq 6); do
 	curl $url/hash
+	echo
 done
 
 echo "Done"
