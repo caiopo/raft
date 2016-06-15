@@ -15,7 +15,7 @@ url=http://192.168.1.201:$1
 
 for cli in 4 8 16 32 64; do
 
-	echo "Ready to run! requests=$requests clients=$clients replicas=$replicas url=$url"
+	echo "Ready to run! requests=$requests clients=$cli replicas=$replicas url=$url"
 	echo "Press enter to continue"
 
 	read -n1 -s
