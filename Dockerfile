@@ -1,3 +1,3 @@
-FROM ubuntu
+FROM alpine
 ADD raft /home/raft
-CMD ["/home/raft"]
+ENTRYPOINT ["/home/raft"]

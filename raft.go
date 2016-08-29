@@ -13,11 +13,16 @@ import (
 	raft "github.com/caiopo/pontoon"
 )
 
+var (
+	node *raft.Node
+	myip string
+)
+
 func main() {
 	if raft.RunningInKubernetes {
 		log.SetOutput(ioutil.Discard)
 
-		myip := getMyIP("18")
+		myip = getMyIP("18")
 
 		fmt.Println(myip)
 
@@ -28,34 +33,14 @@ func main() {
 		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
 		logger := &raft.Log{}
 		applyer := &raft.StateMachine{}
-		node := raft.NewNode(myip, transport, logger, applyer)
+		node = raft.NewNode(myip, transport, logger, applyer)
 		node.Serve()
 
 		node.Start()
 		defer node.Exit()
 
-		ipsAdded := make([]string, 0)
-
-		for {
-			ipsKube := getIPsFromKubernetes()
-
-			fmt.Print("IPs Kube: ")
-			fmt.Println(ipsKube)
-
-			fmt.Print("IPs Added: ")
-			fmt.Println(ipsAdded)
-
-			for _, ipKube := range ipsKube {
-				if !find(ipKube, ipsAdded) && (ipKube != myip) {
-					node.AddToCluster(ipKube + raft.PORT)
-					ipsAdded = append(ipsAdded, (ipKube))
-				}
-			}
-
-			time.Sleep(time.Second)
-		}
 	} else {
-		myip := os.Args[1]
+		myip = os.Args[1]
 		fmt.Println(myip)
 
 		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
@@ -90,13 +75,14 @@ func getIPsFromKubernetes() []string {
 	resp, err := http.Get("http://" + raft.KubernetesAPIServer + "/api/v1/endpoints")
 
 	if err != nil {
-		// raft.Debug += fmt.Sprintln("ERROR getting endpoints in kubernetes API: ", err.Error())
 		return nil
 	}
+
 	defer resp.Body.Close()
-	contentByte, err2 := ioutil.ReadAll(resp.Body)
-	if err2 != nil {
-		// raft.Debug += fmt.Sprintln("ERROR reading data from endpoints: ", err2.Error())
+
+	contentByte, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
 		return nil
 	}
 
@@ -136,58 +122,21 @@ func getMyIP(firstChars string) string {
 	return "badIPReturn"
 }
 
-// 	for {
+func updateCluster() {
+	ipsAdded := make([]string, 0)
 
-// 		for _, ip := range cluster {
+	for {
+		ipsKube := getIPsFromKubernetes()
 
-// 			go func(ip string) {
+		fmt.Print("IPs Kube: " + fmt.Sprintf("%v", ipsKube) + "\nIPs Added: " + fmt.Sprintf("%v", ipsKube))
 
-// 				for _, port := range raft.ValidPorts {
+		for _, ipKube := range ipsKube {
+			if !find(ipKube, ipsAdded) && (ipKube != myip) {
+				node.AddToCluster(ipKube + raft.PORT)
+				ipsAdded = append(ipsAdded, (ipKube))
+			}
+		}
 
-// 					if port == myport && ip == myip {
-// 						continue
-// 					}
-
-// 					if find(ip+port, ipsAdded) {
-// 						continue
-// 					}
-
-// 					go func(ip string, port string) {
-// 						resp, err := http.Get("http://" + ip + port + "/ping")
-
-// 						if err != nil {
-// 							return
-// 						}
-
-// 						defer resp.Body.Close()
-
-// 						body, err := ioutil.ReadAll(resp.Body)
-
-// 						if err != nil {
-// 							return
-// 						}
-
-// 						ss := string(body[:])
-
-// 						fmt.Println(ss)
-
-// 						if ss != "" {
-// 							mutex.Lock()
-// 							ipsAdded = append(ipsAdded, ip+port)
-// 							node.AddToCluster(ip + port)
-// 							mutex.Unlock()
-// 						}
-
-// 					}(ip, port)
-
-// 				}
-
-// 			}(ip)
-
-// 		}
-
-// 		fmt.Println(ipsAdded)
-// 		time.Sleep(time.Second)
-
-// 	}
-// }
+		time.Sleep(time.Second)
+	}
+}
