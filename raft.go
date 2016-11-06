@@ -32,7 +32,7 @@ func main() {
 
 		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
 		logger := &raft.Log{}
-		applyer := &raft.StateMachine{}
+		applyer := &StateMachine{}
 		node = raft.NewNode(myip, transport, logger, applyer)
 		node.Serve()
 
@@ -43,9 +43,13 @@ func main() {
 		myip = os.Args[1]
 		fmt.Println(myip)
 
-		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
+		transport := &raft.HTTPTransport{Address: myip}
 		logger := &raft.Log{}
-		applyer := &raft.StateMachine{}
+		applyer := &StateMachine{}
+
+		applyer.AddReplica("localhost:65431")
+		applyer.AddReplica("localhost:65432")
+
 		node := raft.NewNode(myip, transport, logger, applyer)
 		node.Serve()
 
@@ -53,7 +57,7 @@ func main() {
 		defer node.Exit()
 
 		for _, ip := range os.Args[2:] {
-			node.AddToCluster(ip + raft.PORT)
+			node.AddToCluster(ip)
 		}
 
 		for {
