@@ -1,14 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"time"
+
+	"github.com/bitly/go-simplejson"
 
 	raft "github.com/caiopo/pontoon"
 )
@@ -22,21 +24,24 @@ func main() {
 	if raft.RunningInKubernetes {
 		log.SetOutput(ioutil.Discard)
 
-		myip = getMyIP("18")
+		myip, err := getMyIP("18")
+
+		if err != nil {
+			os.Exit(1)
+		}
 
 		fmt.Println(myip)
 
-		if myip == "badIPReturn" {
-			myip = "localhost"
-		}
-
 		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
 		logger := &raft.Log{}
-		applyer := &StateMachine{}
+		applyer := &raft.StateMachine{}
 		node = raft.NewNode(myip, transport, logger, applyer)
 		node.Serve()
 
 		node.Start()
+
+		updateCluster()
+
 		defer node.Exit()
 
 	} else {
@@ -54,6 +59,7 @@ func main() {
 		node.Serve()
 
 		node.Start()
+
 		defer node.Exit()
 
 		for _, ip := range os.Args[2:] {
@@ -75,64 +81,77 @@ func find(needle string, haystack []string) bool {
 	return false
 }
 
-func getIPsFromKubernetes() []string {
-	resp, err := http.Get("http://" + raft.KubernetesAPIServer + "/api/v1/endpoints")
+func getIPsFromKubernetes(tag string) ([]string, error) {
+	resp, err := http.Get("http://" + raft.KubernetesAPIServer + "/api/v1/namespaces/default/endpoints/" + tag)
 
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 
-	contentByte, err := ioutil.ReadAll(resp.Body)
+	content, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	content := string(contentByte)
+	json, err := simplejson.NewJson(content)
+
+	if err != nil {
+		return nil, err
+	}
 
 	replicas := make([]string, 0)
 
-	words := strings.Split(content, "\"ip\":")
-	for _, v := range words {
-		if v[1:7] == "18.16." { //18.x.x.x, IP of PODS
-			parts := strings.Split(v, ",")
-			theIP := parts[0]
-			theIP = theIP[1 : len(theIP)-1] //remove " chars from IP
-			replicas = append(replicas, theIP)
+	addresses := json.Get("subsets").GetIndex(0).Get("addresses")
+
+	for i := 0; ; i++ {
+
+		ip, err := addresses.GetIndex(i).Get("ip").String()
+
+		if err != nil {
+			break
 		}
+
+		replicas = append(replicas, ip)
 	}
 
-	return replicas
+	return replicas, nil
 }
 
-func getMyIP(firstChars string) string {
+func getMyIP(firstChars string) (string, error) {
 	addrs, err := net.InterfaceAddrs()
+
 	if err != nil {
-		return "couldNotConfigurateIP:" + err.Error()
-	} else {
-		for _, a := range addrs {
-			if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-				if ipnet.IP.To4() != nil {
-					s := ipnet.IP.String()
-					if s[:len(firstChars)] == firstChars {
-						return s
-					}
+		return "", err
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				s := ipnet.IP.String()
+				if s[:len(firstChars)] == firstChars {
+					return s, nil
 				}
 			}
 		}
 	}
-	return "badIPReturn"
+
+	return "", errors.New("ip not found")
 }
 
 func updateCluster() {
 	ipsAdded := make([]string, 0)
 
 	for {
-		ipsKube := getIPsFromKubernetes()
+		ipsKube, err := getIPsFromKubernetes("raft")
 
-		fmt.Print("IPs Kube: " + fmt.Sprintf("%v", ipsKube) + "\nIPs Added: " + fmt.Sprintf("%v", ipsKube))
+		if err != nil {
+			continue
+		}
+
+		fmt.Printf("IPs Kube: %v\nIPs Added: %v\n", ipsKube, ipsAdded)
 
 		for _, ipKube := range ipsKube {
 			if !find(ipKube, ipsAdded) && (ipKube != myip) {

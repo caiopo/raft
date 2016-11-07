@@ -113,8 +113,6 @@ func (s *StateMachine) replica(replicaNumber int) {
 }
 
 func (s *StateMachine) start() {
-	// s.ReplicasLock.
-
 	s.ReplicasLock.RLock()
 	for i, _ := range s.Replicas {
 		go s.replica(i)

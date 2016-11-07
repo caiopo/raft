@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: 2016-11-07T15:48:04Z
+  labels:
+    run: raft
+  name: raft
+  namespace: default
+  resourceVersion: "2611665"
+  selfLink: /api/v1/namespaces/default/services/raft
+  uid: 91cbb3a6-a501-11e6-857c-94de802df35a
+spec:
+  clusterIP: 192.168.3.150
+  ports:
+  # - nodePort: 31921
+  - nodePort: 32100
+    port: 55123
+    protocol: TCP
+    targetPort: 55123
+  selector:
+    run: raft
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}
