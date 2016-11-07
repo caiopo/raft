@@ -27,7 +27,7 @@ spec:
         resources: {}
         terminationMessagePath: /dev/termination-log
         env:
-          - name: RAFT_APP
+        - name: RAFT_APP
           value: logger
       dnsPolicy: ClusterFirst
       restartPolicy: Always

@@ -151,12 +151,12 @@ func updateCluster() {
 			continue
 		}
 
-		fmt.Printf("IPs Kube: %v\nIPs Added: %v\n", ipsKube, ipsAdded)
+		fmt.Printf("IPs Kube: %v\nIPs Added: %v\n\n", ipsKube, ipsAdded)
 
 		for _, ipKube := range ipsKube {
 			if !find(ipKube, ipsAdded) && (ipKube != myip) {
 				node.AddToCluster(ipKube + raft.PORT)
-				ipsAdded = append(ipsAdded, (ipKube))
+				ipsAdded = append(ipsAdded, ipKube)
 			}
 		}
 
