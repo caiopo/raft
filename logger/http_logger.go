@@ -36,12 +36,10 @@ func Hash(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	var port string
+	port := "65432"
 
-	if len(os.Args) < 2 {
+	if len(os.Args) >= 2 {
 		port = os.Args[1]
-	} else {
-		port = "65432"
 	}
 
 	fmt.Printf("Port: %s\n", port)

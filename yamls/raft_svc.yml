@@ -12,7 +12,6 @@ metadata:
 spec:
   clusterIP: 192.168.3.150
   ports:
-  # - nodePort: 31921
   - nodePort: 32100
     port: 55123
     protocol: TCP

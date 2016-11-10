@@ -11,7 +11,7 @@ metadata:
   selfLink: /api/v1/namespaces/default/replicationcontrollers/raft
   uid: 2f35c251-a4ef-11e6-857c-94de802df35a
 spec:
-  replicas: 0
+  replicas: 3
   selector:
     run: raft
   template:

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: 2016-11-10T19:06:28Z
+  labels:
+    run: logger
+  name: logger
+  namespace: default
+  resourceVersion: "2698084"
+  selfLink: /api/v1/namespaces/default/services/logger
+  uid: c8dd3460-a778-11e6-857c-94de802df35a
+spec:
+  clusterIP: 192.168.3.4
+  ports:
+  - nodePort: 34500
+    port: 65432
+    protocol: TCP
+    targetPort: 65432
+  selector:
+    run: logger
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}
