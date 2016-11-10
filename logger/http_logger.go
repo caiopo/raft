@@ -1,10 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var Log []string
@@ -18,24 +20,38 @@ func AddToLog(w http.ResponseWriter, r *http.Request) {
 
 	Log = append(Log, string(url))
 
+	fmt.Fprintf(w, "Saved: %v\n", url)
 }
 
 func Print(w http.ResponseWriter, r *http.Request) {
 	for i, e := range Log {
-		io.WriteString(w, fmt.Sprintf("%d - %s\n", i, e))
+		fmt.Fprintf(w, "%d - %s\n", i, e)
 	}
+}
 
+func Hash(w http.ResponseWriter, r *http.Request) {
+	hash := sha256.Sum256([]byte(strings.Join(Log, "\n")))
+
+	fmt.Fprintf(w, "Hash: %v", hex.EncodeToString(hash[:]))
 }
 
 func main() {
+	var port string
+
 	if len(os.Args) < 2 {
-		fmt.Printf("usage: %s <port>", os.Args[0])
-		os.Exit(1)
+		port = os.Args[1]
+	} else {
+		port = "65432"
 	}
 
-	fmt.Printf("Port: %s\n", os.Args[1])
+	fmt.Printf("Port: %s\n", port)
 
 	http.HandleFunc("/print", Print)
+	http.HandleFunc("/hash", Hash)
 	http.HandleFunc("/", AddToLog)
-	http.ListenAndServe(":"+os.Args[1], nil)
+	err := http.ListenAndServe(":"+port, nil)
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }

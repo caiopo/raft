@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -22,9 +21,11 @@ var (
 
 func main() {
 	if raft.RunningInKubernetes {
-		log.SetOutput(ioutil.Discard)
+		// log.SetOutput(ioutil.Discard)
 
-		myip, err := getMyIP("18")
+		var err error
+
+		myip, err = getMyIP("18")
 
 		if err != nil {
 			os.Exit(1)
@@ -151,7 +152,7 @@ func updateCluster() {
 			continue
 		}
 
-		fmt.Printf("IPs Kube: %v\nIPs Added: %v\n\n", ipsKube, ipsAdded)
+		fmt.Printf("IPs Kube: %v\nIPs Added: %v\nMy IP:%v\n\n", ipsKube, ipsAdded, myip)
 
 		for _, ipKube := range ipsKube {
 			if !find(ipKube, ipsAdded) && (ipKube != myip) {
