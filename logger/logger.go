@@ -16,9 +16,14 @@ func AddToLog(w http.ResponseWriter, r *http.Request) {
 
 	url := r.URL.Path[1:]
 
+	if url == "" {
+		fmt.Fprintln(w, "Empty request!")
+		return
+	}
+
 	fmt.Println(url)
 
-	Log = append(Log, string(url))
+	Log = append(Log, url)
 
 	fmt.Fprintf(w, "Saved: %v\n", url)
 }

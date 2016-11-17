@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -17,13 +18,21 @@ import (
 var (
 	node *raft.Node
 	myip string
+	sm   *StateMachine
 )
 
 func main() {
 	if raft.RunningInKubernetes {
-		// log.SetOutput(ioutil.Discard)
+		logfile, err := os.OpenFile("raft.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 
-		var err error
+		if err != nil {
+			fmt.Printf("error opening file: %v", err)
+		}
+
+		// don't forget to close it
+		defer logfile.Close()
+
+		log.SetOutput(logfile)
 
 		myip, err = getMyIP("18")
 
@@ -35,8 +44,11 @@ func main() {
 
 		transport := &raft.HTTPTransport{Address: myip + raft.PORT}
 		logger := &raft.Log{}
-		applyer := &raft.StateMachine{}
-		node = raft.NewNode(myip, transport, logger, applyer)
+
+		sm = &StateMachine{} // with application
+		// applyer := &raft.StateMachine{} // without application
+
+		node = raft.NewNode(myip, transport, logger, sm)
 		node.Serve()
 
 		node.Start()
@@ -83,11 +95,15 @@ func find(needle string, haystack []string) bool {
 }
 
 func getIPsFromKubernetes(tag string) ([]string, error) {
+	log.Printf("starting getIPsFromKubernetes(%s)\n", tag)
+
 	resp, err := http.Get("http://" + raft.KubernetesAPIServer + "/api/v1/namespaces/default/endpoints/" + tag)
 
 	if err != nil {
 		return nil, err
 	}
+
+	log.Println("GET successful")
 
 	defer resp.Body.Close()
 
@@ -97,11 +113,15 @@ func getIPsFromKubernetes(tag string) ([]string, error) {
 		return nil, err
 	}
 
+	log.Println("Read body")
+
 	json, err := simplejson.NewJson(content)
 
 	if err != nil {
 		return nil, err
 	}
+
+	log.Println("Parsing json")
 
 	replicas := make([]string, 0)
 
@@ -117,6 +137,8 @@ func getIPsFromKubernetes(tag string) ([]string, error) {
 
 		replicas = append(replicas, ip)
 	}
+
+	log.Printf("Done: %v\n", replicas)
 
 	return replicas, nil
 }
@@ -143,24 +165,50 @@ func getMyIP(firstChars string) (string, error) {
 }
 
 func updateCluster() {
-	ipsAdded := make([]string, 0)
+	ipsAddedRaft := make([]string, 0)
+	ipsAddedApp := make([]string, 0)
+
+	appName := os.Getenv("RAFT_APP")
+
+	if appName == "" {
+		// TODO: write log to file
+		log.Println("RAFT_APP environment variable not found")
+		os.Exit(1)
+	}
 
 	for {
-		ipsKube, err := getIPsFromKubernetes("raft")
+		ipsRaft, err := getIPsFromKubernetes("raft")
 
 		if err != nil {
 			continue
 		}
 
-		fmt.Printf("IPs Kube: %v\nIPs Added: %v\nMy IP:%v\n\n", ipsKube, ipsAdded, myip)
-
-		for _, ipKube := range ipsKube {
-			if !find(ipKube, ipsAdded) && (ipKube != myip) {
-				node.AddToCluster(ipKube + raft.PORT)
-				ipsAdded = append(ipsAdded, ipKube)
+		for _, ipRaft := range ipsRaft {
+			if !find(ipRaft, ipsAddedRaft) && (ipRaft != myip) {
+				node.AddToCluster(ipRaft + raft.PORT)
+				ipsAddedRaft = append(ipsAddedRaft, ipRaft)
 			}
 		}
 
-		time.Sleep(time.Second)
+		log.Printf("IPs Raft: %v IPs Added: %v My IP:%v\n", ipsRaft, ipsAddedRaft, myip)
+
+		time.Sleep(500 * time.Millisecond)
+
+		ipsApp, err := getIPsFromKubernetes(appName)
+
+		if err != nil {
+			continue
+		}
+
+		for _, ipApp := range ipsApp {
+			if !find(ipApp, ipsAddedApp) {
+				sm.AddReplica(ipApp)
+				ipsAddedApp = append(ipsAddedApp, ipApp)
+			}
+		}
+
+		log.Printf("IPs App: %v IPs Added: %v\n", ipsApp, ipsAddedApp)
+
+		time.Sleep(500 * time.Millisecond)
 	}
 }

@@ -2,7 +2,9 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"net/http"
+	"runtime"
 	"sync"
 
 	raft "github.com/caiopo/pontoon"
@@ -68,6 +70,8 @@ func (s *StateMachine) replica(replicaNumber int) {
 	myReplica := s.Replicas[replicaNumber]
 	s.ReplicasLock.RUnlock()
 
+	log.Printf("smthread[%v]: started sm thread (ip: %v)\n", myReplica, replicaNumber)
+
 	curIndex := 0
 
 	for {
@@ -78,12 +82,17 @@ func (s *StateMachine) replica(replicaNumber int) {
 
 		// if yes, send it to the replica
 		if !next {
+			runtime.Gosched()
 			continue
 		}
+
+		log.Printf("smthread[%v]: new request!\n", replicaNumber)
 
 		s.LogLock.RLock()
 		curRequest := s.Log[curIndex]
 		s.LogLock.RUnlock()
+
+		log.Println("smthread[%v]: sending request: %v", replicaNumber, curRequest)
 
 		body, err := sendTo(myReplica, curRequest)
 
@@ -103,16 +112,18 @@ func (s *StateMachine) replica(replicaNumber int) {
 
 		s.LCELock.Lock()
 		if answerCount >= majority && s.LastEntryCompleted < curIndex {
+			log.Printf("smthread[%v]: majority of replicas executed the request\n", replicaNumber)
 			s.LastEntryCompleted = curIndex
 		}
 		s.LCELock.Unlock()
 
 		curIndex++
-
 	}
 }
 
 func (s *StateMachine) start() {
+	log.Println("starting state machine threads")
+
 	s.ReplicasLock.RLock()
 	for i, _ := range s.Replicas {
 		go s.replica(i)
@@ -123,8 +134,11 @@ func (s *StateMachine) start() {
 }
 
 func sendTo(ip string, entry *SMEntry) (string, error) {
+	url := "http://" + ip + raft.APP_PORT + "/" + string(entry.Body)
 
-	response, err := http.Get("http://" + ip + "/" + string(entry.Body))
+	log.Printf("GET %v\n", url)
+
+	response, err := http.Get(url)
 
 	if err != nil || response.StatusCode != RESPONSE_OK {
 		return "", err
@@ -134,9 +148,13 @@ func sendTo(ip string, entry *SMEntry) (string, error) {
 
 	body, err := ioutil.ReadAll(response.Body)
 
+	strresp := string(body)
+
+	log.Printf("received %v from %v\n", strresp, ip)
+
 	if err != nil {
 		return "", err
 	}
 
-	return string(body), nil
+	return strresp, nil
 }
