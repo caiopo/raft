@@ -1,0 +1,20 @@
+e1:
+3 app
+8000 writes, 16 clients
+
+raft leader: 202
+
+e2:
+1 app
+8000 writes, 16 clients
+80000 reads, 256 clients
+
+raft leader: 202
+logger: 201
+
+e3:
+3 app
+8000 writes, 16 clients
+80000 reads, 256 clients
+
+raft leader: 202
