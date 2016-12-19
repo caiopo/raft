@@ -32,7 +32,8 @@ func main() {
 		// don't forget to close it
 		defer logfile.Close()
 
-		log.SetOutput(logfile)
+		// log.SetOutput(logfile)
+		log.SetOutput(ioutil.Discard)
 
 		myip, err = getMyIP("18")
 
