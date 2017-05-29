@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 var Log []string
+var LogLock sync.RWMutex
 
 func AddToLog(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -23,21 +25,39 @@ func AddToLog(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(url)
 
+	LogLock.Lock()
 	Log = append(Log, url)
+	LogLock.Unlock()
 
 	fmt.Fprintf(w, "Saved: %v\n", url)
 }
 
 func Print(w http.ResponseWriter, r *http.Request) {
+	LogLock.RLock()
 	for i, e := range Log {
 		fmt.Fprintf(w, "%d - %s\n", i, e)
 	}
+	LogLock.RUnlock()
 }
 
 func Hash(w http.ResponseWriter, r *http.Request) {
-	hash := sha256.Sum256([]byte(strings.Join(Log, "\n")))
+
+	LogLock.RLock()
+	joinLog := strings.Join(Log, "\n")
+	LogLock.RUnlock()
+
+	hash := sha256.Sum256([]byte(joinLog))
 
 	fmt.Fprintf(w, "Hash: %v", hex.EncodeToString(hash[:]))
+}
+
+func Length(w http.ResponseWriter, r *http.Request) {
+
+	LogLock.RLock()
+	logLen := len(Log)
+	LogLock.RUnlock()
+
+	fmt.Fprintf(w, "%d", logLen)
 }
 
 func main() {
@@ -51,6 +71,7 @@ func main() {
 
 	http.HandleFunc("/print", Print)
 	http.HandleFunc("/hash", Hash)
+	http.HandleFunc("/len", Length)
 	http.HandleFunc("/", AddToLog)
 	err := http.ListenAndServe(":"+port, nil)
 
