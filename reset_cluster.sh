@@ -8,4 +8,5 @@ sleep 10
 
 sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc logger --replicas=$1
 sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc raft --replicas=3
+sleep 5
 sudo /opt/bin/kubectl --server=192.168.1.200:8080 scale rc fw1 --replicas=1
