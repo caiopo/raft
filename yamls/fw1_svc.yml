@@ -12,7 +12,7 @@ metadata:
 spec:
   clusterIP: 192.168.3.127
   ports:
-  - nodePort: 32025
+  - nodePort: 30123
     port: 12345
     protocol: TCP
     targetPort: 12345

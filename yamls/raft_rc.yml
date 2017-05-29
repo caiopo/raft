@@ -21,7 +21,7 @@ spec:
         run: raft
     spec:
       containers:
-      - image: caiopo/raft
+      - image: caiopo/raft:latest
         imagePullPolicy: Always
         name: raft
         resources: {}

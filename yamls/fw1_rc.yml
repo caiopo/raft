@@ -22,10 +22,13 @@ spec:
     spec:
       containers:
       - image: caiopo/firewall
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: fw1
         resources: {}
         terminationMessagePath: /dev/termination-log
+        env:
+        - name: TAG
+          value: raft
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
