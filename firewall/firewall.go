@@ -5,9 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
-
 	"os"
+	"sync"
 
 	"github.com/bitly/go-simplejson"
 )
