@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: 2017-05-29T18:25:55Z
+  labels:
+    run: fw2
+  name: fw2
+  namespace: default
+  resourceVersion: "4230429"
+  selfLink: /api/v1/namespaces/default/services/fw2
+  uid: 40cbdbc3-449c-11e7-8ff2-94de802df35a
+spec:
+  clusterIP: 192.168.3.139
+  ports:
+  - nodePort: 32408
+    port: 12345
+    protocol: TCP
+    targetPort: 12345
+  selector:
+    run: fw2
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}

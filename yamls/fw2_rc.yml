@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  creationTimestamp: 2017-05-29T18:25:48Z
+  generation: 1
+  labels:
+    run: fw2
+  name: fw2
+  namespace: default
+  resourceVersion: "4230415"
+  selfLink: /api/v1/namespaces/default/replicationcontrollers/fw2
+  uid: 3c9fee85-449c-11e7-8ff2-94de802df35a
+spec:
+  replicas: 1
+  selector:
+    run: fw2
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: fw2
+    spec:
+      containers:
+      - image: caiopo/firewall
+        imagePullPolicy: IfNotPresent
+        name: fw2
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+status:
+  observedGeneration: 1
+  replicas: 1
