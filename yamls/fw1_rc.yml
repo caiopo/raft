@@ -29,6 +29,8 @@ spec:
         env:
         - name: TAG
           value: raft
+        - name: PORT
+          value: "55123"
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
