@@ -7,68 +7,85 @@ import (
 	"net/http"
 	"sync"
 
+	"os"
+
 	"github.com/bitly/go-simplejson"
 )
 
 const (
 	KubernetesAPIServer = "192.168.1.200:8080"
 	Port                = ":55123"
+	Tag                 = "raft"
 )
 
 var (
-	tag      string
 	hosts    []string
 	next     int = 0
 	nextLock sync.Mutex
 )
 
+func UpdateHosts() error {
+	hst, err := getIPsFromKubernetes(Tag)
+
+	hosts = hst
+
+	return err
+}
+
 func Update(rw http.ResponseWriter, req *http.Request) {
-	hst, err := getIPsFromKubernetes(tag)
+	err := UpdateHosts()
 
 	if err != nil {
 		fmt.Fprintln(rw, err)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	hosts = hst
 
 	fmt.Fprintln(rw, "Hosts: ", hosts)
 }
 
 func Hosts(rw http.ResponseWriter, req *http.Request) {
-	fmt.Println(hosts)
+	fmt.Fprintln(rw, "Hosts: ", hosts)
 }
 
 func Forward(rw http.ResponseWriter, req *http.Request) {
-	go func() {
-		nextLock.Lock()
-		target := next
-		next = (next + 1) % len(hosts)
-		nextLock.Unlock()
+	nextLock.Lock()
+	host := hosts[next]
+	next = (next + 1) % len(hosts)
+	nextLock.Unlock()
 
-		resp, err := http.Get("http://" + hosts[target] + Port + req.URL.Path)
+	url := host + Port + req.URL.Path
 
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	log.Printf("fowarding: %v", url)
 
-		body, err := ioutil.ReadAll(resp.Body)
+	resp, err := http.Get("http://" + url)
 
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-		rw.Write(body)
-	}()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(resp.StatusCode)
+	rw.Write(body)
 }
 
 func main() {
 
-	http.HandleFunc("/update/", Update)
-	http.HandleFunc("/hosts/", Hosts)
+	http.HandleFunc("/update", Update)
+	http.HandleFunc("/hosts", Hosts)
 	http.HandleFunc("/", Forward)
+
+	if UpdateHosts() != nil {
+		fmt.Println("Error on initial update!")
+		os.Exit(1)
+	}
 
 	http.ListenAndServe(":12345", nil)
 

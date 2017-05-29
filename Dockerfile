@@ -1,3 +1,3 @@
 FROM alpine
-ADD raft /home/raft
+ADD raft /home/
 CMD ["/home/raft"]
