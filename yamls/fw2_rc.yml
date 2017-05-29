@@ -22,10 +22,15 @@ spec:
     spec:
       containers:
       - image: caiopo/firewall
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: fw2
         resources: {}
         terminationMessagePath: /dev/termination-log
+        env:
+        - name: TAG
+          value: logger
+        - name: PORT
+          value: "65432"
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
