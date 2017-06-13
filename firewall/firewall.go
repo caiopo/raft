@@ -1,48 +1,63 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"sync"
+	"strings"
+	"time"
 
 	"github.com/bitly/go-simplejson"
 )
 
 const (
 	KubernetesAPIServer = "192.168.1.200:8080"
+	TAG                 = "raft"
+	PORT                = ":55123"
 )
 
 var (
-	PORT     = ":" + os.Getenv("PORT")
-	TAG      = os.Getenv("TAG")
-	hosts    []string
-	next     = 0
-	nextLock sync.Mutex
+	targetIP string
 )
 
-func RedirectHandler(req *http.Request, via []*http.Request) error {
-	fmt.Println(via)
-
-	return nil
-}
-
-var client = &http.Client{
-	CheckRedirect: RedirectHandler,
-}
-
-func UpdateHosts() error {
+func UpdateIP() error {
 	hst, err := getIPsFromKubernetes(TAG)
 
-	hosts = hst
+	if err != nil {
+		return err
+	}
 
-	return err
+	hosts := make([]string, len(hst))
+
+	for i, ip := range hst {
+		resp, err := http.Get("http://" + ip + PORT + "/leader")
+
+		if err != nil {
+			return err
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			return err
+		}
+
+		hosts[i] = strings.Trim(string(body), "\" ")
+	}
+
+	if len(hosts) != 0 {
+		targetIP = hosts[0]
+		return nil
+	}
+
+	return errors.New(":(")
 }
 
 func Update(rw http.ResponseWriter, req *http.Request) {
-	err := UpdateHosts()
+	err := UpdateIP()
 
 	if err != nil {
 		fmt.Fprintln(rw, err)
@@ -50,28 +65,23 @@ func Update(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Fprintln(rw, "Hosts: ", hosts)
+	fmt.Fprintln(rw, "Target: ", targetIP)
 }
 
-func Hosts(rw http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(rw, "Hosts: ", hosts)
+func Target(rw http.ResponseWriter, req *http.Request) {
+	fmt.Fprintln(rw, "Target: ", targetIP)
 }
 
 func Forward(rw http.ResponseWriter, req *http.Request) {
-	nextLock.Lock()
-	host := hosts[next]
-	next = (next + 1) % len(hosts)
-	nextLock.Unlock()
-
-	url := host + PORT + req.URL.Path
+	url := targetIP + req.URL.Path
 
 	log.Printf("fowarding: %v", url)
 
-	resp, err := client.Get("http://" + url)
+	resp, err := http.Get("http://" + url)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(rw, "Error: get")
+		fmt.Fprintln(rw, "Error: get: ", err.Error())
 		return
 	}
 
@@ -79,7 +89,7 @@ func Forward(rw http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(rw, "Error: read body")
+		fmt.Fprintln(rw, "Error: read body: ", err.Error())
 		return
 	}
 
@@ -94,17 +104,18 @@ func Version(rw http.ResponseWriter, req *http.Request) {
 func main() {
 
 	http.HandleFunc("/update", Update)
-	http.HandleFunc("/hosts", Hosts)
+	http.HandleFunc("/target", Target)
 	http.HandleFunc("/version", Version)
 	http.HandleFunc("/", Forward)
 
-	if UpdateHosts() != nil {
+	time.Sleep(time.Second)
+
+	if UpdateIP() != nil {
 		fmt.Println("Error on initial update!")
 		os.Exit(1)
 	}
 
 	http.ListenAndServe(":12345", nil)
-
 }
 
 func getIPsFromKubernetes(tag string) ([]string, error) {
