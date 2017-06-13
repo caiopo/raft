@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: 2017-06-13T14:35:46Z
+  labels:
+    run: firewall
+  name: firewall
+  namespace: default
+  resourceVersion: "4630261"
+  selfLink: /api/v1/namespaces/default/services/firewall
+  uid: 9644d04c-5045-11e7-8ff2-94de802df35a
+spec:
+  clusterIP: 192.168.3.36
+  ports:
+  - nodePort: 30760
+    port: 12345
+    protocol: TCP
+    targetPort: 12345
+  selector:
+    run: firewall
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}
