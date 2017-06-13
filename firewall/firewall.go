@@ -13,18 +13,28 @@ import (
 
 const (
 	KubernetesAPIServer = "192.168.1.200:8080"
-	Port                = ":55123"
-	Tag                 = "raft"
 )
 
 var (
+	PORT     = ":" + os.Getenv("PORT")
+	TAG      = os.Getenv("TAG")
 	hosts    []string
-	next     int = 0
+	next     = 0
 	nextLock sync.Mutex
 )
 
+func RedirectHandler(req *http.Request, via []*http.Request) error {
+	fmt.Println(via)
+
+	return nil
+}
+
+var client = &http.Client{
+	CheckRedirect: RedirectHandler,
+}
+
 func UpdateHosts() error {
-	hst, err := getIPsFromKubernetes(Tag)
+	hst, err := getIPsFromKubernetes(TAG)
 
 	hosts = hst
 
@@ -53,14 +63,15 @@ func Forward(rw http.ResponseWriter, req *http.Request) {
 	next = (next + 1) % len(hosts)
 	nextLock.Unlock()
 
-	url := host + Port + req.URL.Path
+	url := host + PORT + req.URL.Path
 
 	log.Printf("fowarding: %v", url)
 
-	resp, err := http.Get("http://" + url)
+	resp, err := client.Get("http://" + url)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(rw, "Error: get")
 		return
 	}
 
@@ -68,6 +79,7 @@ func Forward(rw http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(rw, "Error: read body")
 		return
 	}
 
@@ -75,10 +87,15 @@ func Forward(rw http.ResponseWriter, req *http.Request) {
 	rw.Write(body)
 }
 
+func Version(rw http.ResponseWriter, req *http.Request) {
+	fmt.Fprintln(rw, 1)
+}
+
 func main() {
 
 	http.HandleFunc("/update", Update)
 	http.HandleFunc("/hosts", Hosts)
+	http.HandleFunc("/version", Version)
 	http.HandleFunc("/", Forward)
 
 	if UpdateHosts() != nil {
